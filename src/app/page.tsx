@@ -1,65 +1,146 @@
-import Image from "next/image";
+// src/app/page.tsx
+"use client";
 
-export default function Home() {
+import { useEffect, useState } from "react";
+import { useCartStore, Product as StoreProduct } from "@/store/useCartStore";
+import { Card, CardContent } from "@/components/ui/card";
+import { Button } from "@/components/ui/button";
+import { ScrollArea } from "@/components/ui/scroll-area";
+
+// สร้าง Type มารับข้อมูลที่ได้จาก API
+interface APIProduct extends StoreProduct {
+  category: {
+    id: string;
+    name: string;
+  };
+}
+
+export default function POSPage() {
+  const { items, addItem, removeItem, getTotal, clearCart } = useCartStore();
+  const [products, setProducts] = useState<APIProduct[]>([]);
+  const [isLoading, setIsLoading] = useState(true);
+
+  // ดึงข้อมูลจาก API เมื่อเปิดหน้าเว็บ
+  useEffect(() => {
+    const fetchProducts = async () => {
+      try {
+        const res = await fetch("/api/products");
+        const data = await res.json();
+        setProducts(data);
+      } catch (error) {
+        console.error("Failed to load menu", error);
+      } finally {
+        setIsLoading(false);
+      }
+    };
+    fetchProducts();
+  }, []);
+
   return (
-    <div className="flex min-h-screen items-center justify-center bg-zinc-50 font-sans dark:bg-black">
-      <main className="flex min-h-screen w-full max-w-3xl flex-col items-center justify-between py-32 px-16 bg-white dark:bg-black sm:items-start">
-        <Image
-          className="dark:invert"
-          src="/next.svg"
-          alt="Next.js logo"
-          width={100}
-          height={20}
-          priority
-        />
-        <div className="flex flex-col items-center gap-6 text-center sm:items-start sm:text-left">
-          <h1 className="max-w-xs text-3xl font-semibold leading-10 tracking-tight text-black dark:text-zinc-50">
-            To get started, edit the page.tsx file.
-          </h1>
-          <p className="max-w-md text-lg leading-8 text-zinc-600 dark:text-zinc-400">
-            Looking for a starting point or more instructions? Head over to{" "}
-            <a
-              href="https://vercel.com/templates?framework=next.js&utm_source=create-next-app&utm_medium=appdir-template-tw&utm_campaign=create-next-app"
-              className="font-medium text-zinc-950 dark:text-zinc-50"
-            >
-              Templates
-            </a>{" "}
-            or the{" "}
-            <a
-              href="https://nextjs.org/learn?utm_source=create-next-app&utm_medium=appdir-template-tw&utm_campaign=create-next-app"
-              className="font-medium text-zinc-950 dark:text-zinc-50"
-            >
-              Learning
-            </a>{" "}
-            center.
-          </p>
+    <div className="flex h-screen bg-zinc-50 overflow-hidden">
+      {/* ฝั่งซ้าย: โซนเลือกเมนู */}
+      <div className="flex-1 p-6 flex flex-col h-full">
+        <h1 className="text-2xl font-bold mb-6 text-zinc-800">Menu</h1>
+
+        <ScrollArea className="flex-1">
+          {isLoading ? (
+            <div className="flex items-center justify-center h-full text-zinc-500">
+              กำลังโหลดข้อมูลเมนู...
+            </div>
+          ) : (
+            <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-4">
+              {products.map((product) => (
+                <Card
+                  key={product.id}
+                  className="cursor-pointer hover:border-zinc-400 transition-colors shadow-sm"
+                  onClick={() =>
+                    addItem(
+                      product,
+                      product.category.name === "Slow Bar"
+                        ? "AeroPress"
+                        : undefined,
+                    )
+                  }
+                >
+                  <CardContent className="p-4 flex flex-col h-full justify-between items-center text-center">
+                    <div className="h-24 w-24 bg-zinc-200 rounded-md mb-4 flex items-center justify-center text-3xl">
+                      {product.category.name === "Bakery" ? "🥐" : "☕"}
+                    </div>
+                    <h3 className="font-medium text-sm text-zinc-700">
+                      {product.name}
+                    </h3>
+                    <p className="font-semibold text-zinc-900 mt-2">
+                      ฿{product.price}
+                    </p>
+                  </CardContent>
+                </Card>
+              ))}
+            </div>
+          )}
+        </ScrollArea>
+      </div>
+
+      {/* ฝั่งขวา: โซนตะกร้าคิดเงิน */}
+      <div className="w-100 bg-white border-l border-zinc-200 p-6 flex flex-col shadow-xl z-10">
+        <h2 className="text-xl font-bold mb-6 text-zinc-800">Current Order</h2>
+        <ScrollArea className="flex-1 pr-4 -mr-4">
+          {items.length === 0 ? (
+            <div className="flex flex-col items-center justify-center h-full text-zinc-400">
+              <p>ยังไม่มีรายการสินค้า</p>
+            </div>
+          ) : (
+            <div className="space-y-4">
+              {items.map((item) => (
+                <div
+                  key={item.cartItemId}
+                  className="flex justify-between items-start"
+                >
+                  <div>
+                    <p className="font-medium text-zinc-800">{item.name}</p>
+                    {item.brewMethod && (
+                      <p className="text-xs text-zinc-500">
+                        Method: {item.brewMethod}
+                      </p>
+                    )}
+                    <p className="text-sm text-zinc-500">
+                      ฿{item.price} x {item.quantity}
+                    </p>
+                  </div>
+                  <div className="flex flex-col items-end gap-2">
+                    <p className="font-semibold text-zinc-900">
+                      ฿{item.price * item.quantity}
+                    </p>
+                    <Button
+                      variant="destructive"
+                      size="sm"
+                      className="h-6 text-xs"
+                      onClick={() => removeItem(item.cartItemId)}
+                    >
+                      ลบ
+                    </Button>
+                  </div>
+                </div>
+              ))}
+            </div>
+          )}
+        </ScrollArea>
+        <div className="pt-6 mt-6 border-t border-zinc-200">
+          <div className="flex justify-between items-center mb-6">
+            <span className="text-zinc-500 font-medium">Total</span>
+            <span className="text-3xl font-bold text-zinc-900">
+              ฿{getTotal()}
+            </span>
+          </div>
+          <div className="grid grid-cols-2 gap-3">
+            <Button variant="outline" className="w-full" onClick={clearCart}>
+              ยกเลิก
+            </Button>
+            <Button className="w-full bg-zinc-900 text-white hover:bg-zinc-800">
+              ชำระเงิน
+            </Button>
+          </div>
         </div>
-        <div className="flex flex-col gap-4 text-base font-medium sm:flex-row">
-          <a
-            className="flex h-12 w-full items-center justify-center gap-2 rounded-full bg-foreground px-5 text-background transition-colors hover:bg-[#383838] dark:hover:bg-[#ccc] md:w-[158px]"
-            href="https://vercel.com/new?utm_source=create-next-app&utm_medium=appdir-template-tw&utm_campaign=create-next-app"
-            target="_blank"
-            rel="noopener noreferrer"
-          >
-            <Image
-              className="dark:invert"
-              src="/vercel.svg"
-              alt="Vercel logomark"
-              width={16}
-              height={16}
-            />
-            Deploy Now
-          </a>
-          <a
-            className="flex h-12 w-full items-center justify-center rounded-full border border-solid border-black/[.08] px-5 transition-colors hover:border-transparent hover:bg-black/[.04] dark:border-white/[.145] dark:hover:bg-[#1a1a1a] md:w-[158px]"
-            href="https://nextjs.org/docs?utm_source=create-next-app&utm_medium=appdir-template-tw&utm_campaign=create-next-app"
-            target="_blank"
-            rel="noopener noreferrer"
-          >
-            Documentation
-          </a>
-        </div>
-      </main>
+      </div>
     </div>
   );
 }
