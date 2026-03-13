@@ -1,0 +1,96 @@
+// schema.prisma
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql" // แนะนำให้ใช้ PostgreSQL
+}
+
+// 1. ระบบผู้ใช้งานและสิทธิ์ (จัดการใครเข้าหน้า /admin หรือหน้าจอขาย)
+model User {
+  id        String   @id @default(cuid())
+  email     String   @unique
+  name      String?
+  role      Role     @default(STAFF)
+  orders    Order[]  // ออเดอร์ที่พนักงานคนนี้เป็นคนรับ
+  createdAt DateTime @default(now())
+}
+
+enum Role {
+  ADMIN
+  STAFF
+}
+
+// 2. หมวดหมู่และสินค้า
+model Category {
+  id       String    @id @default(cuid())
+  name     String    // เช่น Coffee, Non-Coffee, Bakery
+  products Product[]
+}
+
+model Product {
+  id          String       @id @default(cuid())
+  name        String
+  price       Float
+  categoryId  String
+  category    Category     @relation(fields: [categoryId], references: [id])
+  orderItems  OrderItem[]
+  recipeItems RecipeItem[] // สูตรสำหรับตัดสต็อก
+}
+
+// 3. ระบบจัดการสต็อกวัตถุดิบ (Inventory)
+model InventoryItem {
+  id          String       @id @default(cuid())
+  name        String       // เช่น เมล็ดคั่วอ่อน, นมสด, แก้วพลาสติก 16oz
+  unit        String       // กรัม, ml, ใบ
+  quantity    Float        @default(0) // ยอดคงเหลือ
+  recipeItems RecipeItem[]
+}
+
+// 4. สูตรการทำเครื่องดื่ม (ผูกสินค้าย่อยกับสต็อก)
+model RecipeItem {
+  id              String        @id @default(cuid())
+  productId       String
+  product         Product       @relation(fields: [productId], references: [id])
+  inventoryItemId String
+  inventoryItem   InventoryItem @relation(fields: [inventoryItemId], references: [id])
+  amountRequired  Float         // จำนวนที่ใช้ต่อ 1 เสิร์ฟ (เช่น ใช้เมล็ดกาแฟ 18 กรัม)
+}
+
+// 5. ออเดอร์และการจัดการคิว
+model Order {
+  id          String      @id @default(cuid())
+  userId      String      // พนักงานที่ทำรายการ
+  user        User        @relation(fields: [userId], references: [id])
+  status      OrderStatus @default(PENDING)
+  totalAmount Float
+  items       OrderItem[]
+  createdAt   DateTime    @default(now())
+  updatedAt   DateTime    @updatedAt
+}
+
+enum OrderStatus {
+  PENDING     // รอยืนยัน/รอจ่ายเงิน
+  IN_PROGRESS // กำลังชง
+  COMPLETED   // เสิร์ฟแล้ว
+  CANCELLED   // ยกเลิก
+}
+
+// 6. รายการสินค้าในออเดอร์ (และตัวเลือกการชง)
+model OrderItem {
+  id          String  @id @default(cuid())
+  orderId     String
+  order       Order   @relation(fields: [orderId], references: [id])
+  productId   String
+  product     Product @relation(fields: [productId], references: [id])
+  quantity    Int
+
+  // --- Coffee Customizations ---
+  brewMethod  String? // เช่น AeroPress, Espresso Machine, Drip
+  grindSize   Int?    // เบอร์บด (เช่น ระบุเบอร์คลิกของเครื่องบด Timemore)
+  temperature Float?  // อุณหภูมิน้ำที่ใช้สกัด (องศาเซลเซียส)
+  sweetness   Int?    // ระดับความหวาน (%)
+  note        String? // หมายเหตุเพิ่มเติมจากลูกค้า
+}
