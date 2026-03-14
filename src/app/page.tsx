@@ -12,6 +12,8 @@ import { Card, CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import { useSession, signOut } from "next-auth/react";
+import Link from "next/link";
 
 // สร้าง Type มารับข้อมูลที่ได้จาก API
 interface APIProduct extends StoreProduct {
@@ -22,6 +24,7 @@ interface APIProduct extends StoreProduct {
 }
 
 export default function POSPage() {
+  const { data: session } = useSession(); // ดึงข้อมูล Session มาเช็คว่ายังล็อกอินอยู่ไหม
   const [selectedProduct, setSelectedProduct] = useState<APIProduct | null>(
     null,
   );
@@ -122,7 +125,47 @@ export default function POSPage() {
     <div className="flex h-screen bg-zinc-50 overflow-hidden">
       {/* ฝั่งซ้าย: โซนเลือกเมนู */}
       <div className="flex-1 p-6 flex flex-col h-full">
-        <h1 className="text-2xl font-bold mb-6 text-zinc-800">Menu</h1>
+        {/* เริ่ม: แถบ Header โฉมใหม่ */}
+        <div className="flex justify-between items-center mb-6">
+          <h1 className="text-2xl font-bold text-zinc-800">Menu</h1>
+
+          <div className="flex items-center gap-4">
+            {session ? (
+              <>
+                <div className="text-sm text-zinc-600 bg-white px-3 py-1.5 rounded-full border border-zinc-200">
+                  พนักงาน:{" "}
+                  <span className="font-semibold text-zinc-900">
+                    {session.user?.email}
+                  </span>
+                </div>
+
+                {/* เช็คสิทธิ์: ถ้า Role เป็น admin (แปลงตัวเล็กใหญ่ให้ตรงกัน) ถึงจะเห็นปุ่มนี้ */}
+                {(session.user as any)?.role?.toLowerCase() === "admin" && (
+                  <Link href="/admin">
+                    <Button variant="outline" className="border-zinc-300">
+                      ⚙️ จัดการร้าน (Admin)
+                    </Button>
+                  </Link>
+                )}
+
+                <Button
+                  variant="ghost"
+                  onClick={() => signOut()}
+                  className="text-red-500 hover:text-red-600 hover:bg-red-50"
+                >
+                  ออกจากระบบ
+                </Button>
+              </>
+            ) : (
+              <Link href="/login">
+                <Button className="bg-zinc-900 text-white hover:bg-zinc-800">
+                  เข้าสู่ระบบ
+                </Button>
+              </Link>
+            )}
+          </div>
+        </div>
+        {/* จบ: แถบ Header โฉมใหม่ */}
 
         {isLoading ? (
           <div className="flex items-center justify-center h-full text-zinc-500">
