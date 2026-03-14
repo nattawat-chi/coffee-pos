@@ -1,11 +1,17 @@
 // src/app/page.tsx
 "use client";
-
-import { useEffect, useState } from "react";
+import {
+  Dialog,
+  DialogContent,
+  DialogHeader,
+  DialogTitle,
+} from "@/components/ui/dialog";
+import { useEffect, useState, useMemo } from "react";
 import { useCartStore, Product as StoreProduct } from "@/store/useCartStore";
 import { Card, CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { ScrollArea } from "@/components/ui/scroll-area";
+import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 
 // สร้าง Type มารับข้อมูลที่ได้จาก API
 interface APIProduct extends StoreProduct {
@@ -16,6 +22,10 @@ interface APIProduct extends StoreProduct {
 }
 
 export default function POSPage() {
+  const [selectedProduct, setSelectedProduct] = useState<APIProduct | null>(
+    null,
+  );
+  const [isDialogOpen, setIsDialogOpen] = useState(false);
   const { items, addItem, removeItem, getTotal, clearCart } = useCartStore();
   const [products, setProducts] = useState<APIProduct[]>([]);
   const [isLoading, setIsLoading] = useState(true);
@@ -36,51 +46,132 @@ export default function POSPage() {
     fetchProducts();
   }, []);
 
+  // ฟังก์ชันจัดการตอนกดปุ่มชำระเงิน
+  const handleCheckout = async () => {
+    if (items.length === 0) return alert("ตะกร้าว่างเปล่า");
+
+    try {
+      const res = await fetch("/api/checkout", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ items, totalAmount: getTotal() }),
+      });
+
+      const data = await res.json();
+
+      if (res.ok) {
+        alert(`ชำระเงินสำเร็จ! (Order ID: ${data.orderId})`);
+        clearCart(); // ล้างตะกร้าหลังจ่ายเงินเสร็จ
+      } else {
+        alert(`เกิดข้อผิดพลาด: ${data.error}`);
+      }
+    } catch (error) {
+      alert("เกิดข้อผิดพลาดในการเชื่อมต่อกับเซิร์ฟเวอร์");
+    }
+  };
+
+  // สกัดชื่อหมวดหมู่ทั้งหมดออกมาแบบไม่ให้ซ้ำกัน และจัดเรียงลำดับใหม่
+  const categories = useMemo(() => {
+    const uniqueCategories = Array.from(
+      new Set(products.map((p) => p.category.name)),
+    );
+
+    // จัดเรียง (Sort) ให้ Espresso ขึ้นก่อนเสมอ ส่วนอันอื่นเรียงตามตัวอักษร
+    return uniqueCategories.sort((a, b) => {
+      if (a === "Espresso") return -1; // ดัน a ไปข้างหน้าสุด
+      if (b === "Espresso") return 1; // ดัน b ไปข้างหน้าสุด
+      return a.localeCompare(b); // ตัวอื่นๆ เรียงตาม A-Z
+    });
+  }, [products]);
+
+  // Component ย่อยสำหรับจัดเรียง Grid ของสินค้า (สร้างแยกไว้จะได้ไม่ต้องเขียนโค้ดซ้ำ)
+  const ProductGrid = ({
+    displayProducts,
+  }: {
+    displayProducts: APIProduct[];
+  }) => (
+    <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-4 pb-4">
+      {displayProducts.map((product) => (
+        <Card
+          key={product.id}
+          className="cursor-pointer hover:border-zinc-400 transition-colors shadow-sm"
+          onClick={() => {
+            if (product.category.name === "Slow Bar") {
+              setSelectedProduct(product);
+              setIsDialogOpen(true);
+            } else {
+              addItem(product);
+            }
+          }}
+        >
+          <CardContent className="p-4 flex flex-col h-full justify-between items-center text-center">
+            <div className="h-24 w-24 bg-zinc-200 rounded-md mb-4 flex items-center justify-center text-3xl">
+              {product.category.name === "Bakery" ? "🥐" : "☕"}
+            </div>
+            <h3 className="font-medium text-sm text-zinc-700">
+              {product.name}
+            </h3>
+            <p className="font-semibold text-zinc-900 mt-2">฿{product.price}</p>
+          </CardContent>
+        </Card>
+      ))}
+    </div>
+  );
+
   return (
     <div className="flex h-screen bg-zinc-50 overflow-hidden">
       {/* ฝั่งซ้าย: โซนเลือกเมนู */}
       <div className="flex-1 p-6 flex flex-col h-full">
         <h1 className="text-2xl font-bold mb-6 text-zinc-800">Menu</h1>
 
-        <ScrollArea className="flex-1">
-          {isLoading ? (
-            <div className="flex items-center justify-center h-full text-zinc-500">
-              กำลังโหลดข้อมูลเมนู...
-            </div>
-          ) : (
-            <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-4">
-              {products.map((product) => (
-                <Card
-                  key={product.id}
-                  className="cursor-pointer hover:border-zinc-400 transition-colors shadow-sm"
-                  onClick={() =>
-                    addItem(
-                      product,
-                      product.category.name === "Slow Bar"
-                        ? "AeroPress"
-                        : undefined,
-                    )
-                  }
+        {isLoading ? (
+          <div className="flex items-center justify-center h-full text-zinc-500">
+            กำลังโหลดข้อมูลเมนู...
+          </div>
+        ) : (
+          <Tabs defaultValue="All" className="flex-1 flex flex-col min-h-0">
+            {/* แถบกดเลือกหมวดหมู่ */}
+            {/* แถบกดเลือกหมวดหมู่ (ปรับขนาดให้ใหญ่ขึ้นสำหรับ iPad) */}
+            <TabsList className="mb-6 justify-start w-full bg-zinc-200/50 h-auto p-2 overflow-x-auto">
+              <TabsTrigger
+                value="All"
+                className="text-base md:text-lg px-6 py-3 rounded-md min-w-30 data-[state=active]:shadow-sm"
+              >
+                All Menu
+              </TabsTrigger>
+              {categories.map((cat) => (
+                <TabsTrigger
+                  key={cat}
+                  value={cat}
+                  className="text-base md:text-lg px-6 py-3 rounded-md min-w-30 data-[state=active]:shadow-sm"
                 >
-                  <CardContent className="p-4 flex flex-col h-full justify-between items-center text-center">
-                    <div className="h-24 w-24 bg-zinc-200 rounded-md mb-4 flex items-center justify-center text-3xl">
-                      {product.category.name === "Bakery" ? "🥐" : "☕"}
-                    </div>
-                    <h3 className="font-medium text-sm text-zinc-700">
-                      {product.name}
-                    </h3>
-                    <p className="font-semibold text-zinc-900 mt-2">
-                      ฿{product.price}
-                    </p>
-                  </CardContent>
-                </Card>
+                  {cat}
+                </TabsTrigger>
               ))}
-            </div>
-          )}
-        </ScrollArea>
+            </TabsList>
+
+            <ScrollArea className="flex-1 -mx-6 px-6">
+              {/* หน้าต่างแสดงผล: ทุกหมวดหมู่ */}
+              <TabsContent value="All" className="mt-0">
+                <ProductGrid displayProducts={products} />
+              </TabsContent>
+
+              {/* หน้าต่างแสดงผล: แยกตามหมวดหมู่ */}
+              {categories.map((cat) => (
+                <TabsContent key={cat} value={cat} className="mt-0">
+                  <ProductGrid
+                    displayProducts={products.filter(
+                      (p) => p.category.name === cat,
+                    )}
+                  />
+                </TabsContent>
+              ))}
+            </ScrollArea>
+          </Tabs>
+        )}
       </div>
 
-      {/* ฝั่งขวา: โซนตะกร้าคิดเงิน */}
+      {/* ฝั่งขวา: โซนตะกร้าคิดเงิน (โค้ดเดิม) */}
       <div className="w-100 bg-white border-l border-zinc-200 p-6 flex flex-col shadow-xl z-10">
         <h2 className="text-xl font-bold mb-6 text-zinc-800">Current Order</h2>
         <ScrollArea className="flex-1 pr-4 -mr-4">
@@ -132,15 +223,56 @@ export default function POSPage() {
             </span>
           </div>
           <div className="grid grid-cols-2 gap-3">
-            <Button variant="outline" className="w-full" onClick={clearCart}>
-              ยกเลิก
+            <Button
+              variant="outline"
+              className="w-full cursor-pointer"
+              onClick={clearCart}
+            >
+              ยกเลิกออเดอร์
             </Button>
-            <Button className="w-full bg-zinc-900 text-white hover:bg-zinc-800">
+            <Button
+              className="w-full cursor-pointer bg-zinc-900 text-white hover:bg-zinc-800 disabled:bg-zinc-300"
+              onClick={handleCheckout}
+              disabled={items.length === 0}
+            >
               ชำระเงิน
             </Button>
           </div>
         </div>
       </div>
+      {/* Popup สำหรับเลือกวิธีการชง */}
+      <Dialog open={isDialogOpen} onOpenChange={setIsDialogOpen}>
+        <DialogContent className="sm:max-w-107">
+          <DialogHeader>
+            <DialogTitle>เลือกวิธีการชง (Brew Method)</DialogTitle>
+          </DialogHeader>
+          <div className="grid grid-cols-2 gap-4 py-4">
+            {[
+              "AeroPress",
+              "Pour Over (V60)",
+              "French Press",
+              "Syphon",
+              "Drip",
+              "Other",
+            ].map((method) => (
+              <Button
+                key={method}
+                variant="outline"
+                className="h-16 text-lg hover:bg-zinc-100"
+                onClick={() => {
+                  if (selectedProduct) {
+                    addItem(selectedProduct, method);
+                    setIsDialogOpen(false);
+                    setSelectedProduct(null);
+                  }
+                }}
+              >
+                {method}
+              </Button>
+            ))}
+          </div>
+        </DialogContent>
+      </Dialog>
     </div>
   );
 }

@@ -20,3 +20,28 @@ export async function GET() {
     );
   }
 }
+
+export async function POST(req: Request) {
+  try {
+    const body = await req.json();
+    const { name, price, categoryId } = body;
+
+    // บันทึกสินค้าใหม่ลงฐานข้อมูล
+    const newProduct = await prisma.product.create({
+      data: {
+        name,
+        price: Number(price), // แปลงเป็นตัวเลขเผื่อรับมาเป็น String
+        categoryId,
+      },
+      include: { category: true }, // ให้ส่งข้อมูล Category กลับมาด้วยเลย
+    });
+
+    return NextResponse.json(newProduct);
+  } catch (error) {
+    console.error("Create Product Error:", error);
+    return NextResponse.json(
+      { error: "Failed to create product" },
+      { status: 500 },
+    );
+  }
+}
