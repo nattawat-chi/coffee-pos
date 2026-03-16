@@ -22,6 +22,24 @@ export default function AdminLayout({
             ☕ จัดการเมนู
           </Link>
           <Link
+            href="/admin/recipes"
+            className="hover:text-zinc-300 transition-colors"
+          >
+            📋 จัดการสูตร (Recipes)
+          </Link>
+          <Link
+            href="/admin/inventory"
+            className="hover:text-zinc-300 transition-colors"
+          >
+            📦 คลังวัตถุดิบ (Inventory)
+          </Link>
+          <Link
+            href="/admin/orders"
+            className="hover:text-zinc-300 transition-colors"
+          >
+            🧾 ประวัติออเดอร์ (Orders)
+          </Link>
+          <Link
             href="/"
             className="hover:text-zinc-300 transition-colors mt-auto pt-4 border-t border-zinc-700"
           >

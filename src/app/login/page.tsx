@@ -35,7 +35,7 @@ export default function LoginPage() {
 
   return (
     <div className="flex items-center justify-center min-h-screen bg-zinc-100">
-      <Card className="w-[400px] shadow-lg">
+      <Card className="w-100 shadow-lg">
         <CardHeader>
           <CardTitle className="text-2xl text-center text-zinc-800">
             เข้าสู่ระบบ POS

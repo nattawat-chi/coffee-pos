@@ -37,6 +37,26 @@ export async function POST(req: Request) {
         },
       },
     });
+    for (const item of items) {
+      // 1. ดึงข้อมูล "สูตร" ของกาแฟแก้วนี้
+      const product = await prisma.product.findUnique({
+        where: { id: item.id },
+        include: { recipeItems: true },
+      });
+
+      if (product && product.recipeItems.length > 0) {
+        for (const recipe of product.recipeItems) {
+          // 2. คำนวณปริมาณที่ต้องหัก (ปริมาณในสูตร x จำนวนแก้วที่ลูกค้าสั่ง)
+          const totalUsed = recipe.amountRequired * item.quantity;
+
+          // 3. หักลบออกจากคลัง (ใช้คำสั่ง decrement ของ Prisma)
+          await prisma.inventoryItem.update({
+            where: { id: recipe.inventoryItemId },
+            data: { quantity: { decrement: totalUsed } },
+          });
+        }
+      }
+    }
 
     return NextResponse.json({ success: true, orderId: order.id });
   } catch (error) {

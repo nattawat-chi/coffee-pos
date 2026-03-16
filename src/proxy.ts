@@ -1,10 +1,10 @@
-// src/middleware.ts
+// src/proxy.ts
 import { withAuth } from "next-auth/middleware";
 import { NextResponse } from "next/server";
 
 // ใช้ withAuth เพื่อให้ระบบบังคับล็อกอิน และดึงข้อมูล token มาเช็คได้
 export default withAuth(
-  function middleware(req) {
+  function proxy(req) {
     // 1. ดึง role จาก token ของคนที่ล็อกอินอยู่ (แปลงเป็นพิมพ์เล็กเพื่อป้องกันความผิดพลาด)
     const role = (req.nextauth.token?.role as string)?.toLowerCase();
 

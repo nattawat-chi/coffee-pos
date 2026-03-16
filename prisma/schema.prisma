@@ -39,6 +39,8 @@ model Product {
   category    Category     @relation(fields: [categoryId], references: [id])
   orderItems  OrderItem[]
   recipeItems RecipeItem[] // สูตรสำหรับตัดสต็อก
+  createdAt   DateTime     @default(now())
+  updatedAt   DateTime     @default(now()) @updatedAt
 }
 
 // 3. ระบบจัดการสต็อกวัตถุดิบ (Inventory)
@@ -48,6 +50,8 @@ model InventoryItem {
   unit        String       // กรัม, ml, ใบ
   quantity    Float        @default(0) // ยอดคงเหลือ
   recipeItems RecipeItem[]
+  createdAt   DateTime     @default(now())
+  updatedAt   DateTime     @default(now()) @updatedAt
 }
 
 // 4. สูตรการทำเครื่องดื่ม (ผูกสินค้าย่อยกับสต็อก)
