@@ -25,6 +25,7 @@ interface APIProduct extends StoreProduct {
 
 export default function POSPage() {
   const { data: session } = useSession(); // ดึงข้อมูล Session มาเช็คว่ายังล็อกอินอยู่ไหม
+
   const [selectedProduct, setSelectedProduct] = useState<APIProduct | null>(
     null,
   );
@@ -51,6 +52,10 @@ export default function POSPage() {
 
   // ฟังก์ชันจัดการตอนกดปุ่มชำระเงิน
   const handleCheckout = async () => {
+    if (!session) {
+      alert("⚠️ ไม่อนุญาตให้ทำรายการ: กรุณาเข้าสู่ระบบก่อนชำระเงินครับ");
+      return; // สั่ง return เพื่อหยุดการทำงานของโค้ดด้านล่างทั้งหมดทันที
+    }
     if (items.length === 0) return alert("ตะกร้าว่างเปล่า");
 
     try {
@@ -276,7 +281,7 @@ export default function POSPage() {
             <Button
               className="w-full cursor-pointer bg-zinc-900 text-white hover:bg-zinc-800 disabled:bg-zinc-300"
               onClick={handleCheckout}
-              disabled={items.length === 0}
+              disabled={items.length === 0 || !session} // ปิดปุ่มถ้าไม่มีสินค้าในตะกร้าหรือยังไม่ได้ล็อกอิน
             >
               ชำระเงิน
             </Button>
