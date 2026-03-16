@@ -13,6 +13,7 @@ model User {
   id        String   @id @default(cuid())
   email     String   @unique
   name      String?
+  password  String   @default("")// รหัสผ่าน (ควรเก็บแบบ hash)
   role      Role     @default(STAFF)
   orders    Order[]  // ออเดอร์ที่พนักงานคนนี้เป็นคนรับ
   createdAt DateTime @default(now())
@@ -38,6 +39,8 @@ model Product {
   category    Category     @relation(fields: [categoryId], references: [id])
   orderItems  OrderItem[]
   recipeItems RecipeItem[] // สูตรสำหรับตัดสต็อก
+  createdAt   DateTime     @default(now())
+  updatedAt   DateTime     @default(now()) @updatedAt
 }
 
 // 3. ระบบจัดการสต็อกวัตถุดิบ (Inventory)
@@ -47,6 +50,8 @@ model InventoryItem {
   unit        String       // กรัม, ml, ใบ
   quantity    Float        @default(0) // ยอดคงเหลือ
   recipeItems RecipeItem[]
+  createdAt   DateTime     @default(now())
+  updatedAt   DateTime     @default(now()) @updatedAt
 }
 
 // 4. สูตรการทำเครื่องดื่ม (ผูกสินค้าย่อยกับสต็อก)
