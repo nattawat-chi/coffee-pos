@@ -33,6 +33,9 @@ export async function POST(req: Request) {
             productId: item.id,
             quantity: item.quantity,
             brewMethod: item.brewMethod || null,
+            sweetness:
+              item.sweetness !== undefined ? Number(item.sweetness) : null,
+            note: item.note || null,
           })),
         },
       },

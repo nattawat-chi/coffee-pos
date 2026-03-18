@@ -23,7 +23,6 @@ export default function OrdersHistoryPage() {
     fetchOrders();
   }, []);
 
-  // แปลงวันที่ให้เป็นรูปแบบอ่านง่าย (เช่น 17/03/2026 14:30)
   const formatDate = (dateString: string) => {
     return new Date(dateString).toLocaleString("th-TH", {
       day: "2-digit",
@@ -34,7 +33,6 @@ export default function OrdersHistoryPage() {
     });
   };
 
-  // กำหนดสีของป้ายสถานะ
   const getStatusBadge = (status: string) => {
     switch (status) {
       case "COMPLETED":
@@ -76,7 +74,7 @@ export default function OrdersHistoryPage() {
             <tr>
               <th className="px-6 py-3">เลขที่บิล</th>
               <th className="px-6 py-3">วัน/เวลา</th>
-              <th className="px-6 py-3">พนักงานที่ทำรายการ</th>
+              <th className="px-6 py-3">พนักงาน</th>
               <th className="px-6 py-3">ยอดรวม</th>
               <th className="px-6 py-3">สถานะ</th>
               <th className="px-6 py-3 text-center">รายละเอียด</th>
@@ -88,7 +86,6 @@ export default function OrdersHistoryPage() {
                 key={order.id}
                 className="border-b border-zinc-100 hover:bg-zinc-50"
               >
-                {/* ตัดเลข ID ให้เหลือแค่ 6 ตัวท้าย จะได้ดูเหมือนเลขบิลสวยๆ */}
                 <td className="px-6 py-4 font-mono text-zinc-500">
                   #{order.id.slice(-6).toUpperCase()}
                 </td>
@@ -123,7 +120,7 @@ export default function OrdersHistoryPage() {
         </table>
       </div>
 
-      {/* Popup ดูรายละเอียดบิล (จำลองเหมือนใบเสร็จย่อๆ) */}
+      {/* Popup ดูรายละเอียดบิล */}
       <Dialog open={isDialogOpen} onOpenChange={setIsDialogOpen}>
         <DialogContent className="max-w-sm">
           <DialogHeader>
@@ -144,21 +141,38 @@ export default function OrdersHistoryPage() {
               </span>
             </div>
 
-            {/* รายการสินค้าในบิล */}
-            <div className="border-y border-dashed py-4 space-y-2">
+            {/* 🛑 ส่วนที่แสดงรายการสินค้าและวิธีการชง (แก้มาให้แล้ว) */}
+            <div className="border-y border-dashed py-4 space-y-3">
               {selectedOrder?.items.map((item: any) => (
-                <div key={item.id} className="flex justify-between">
-                  <span>
-                    {item.quantity}x {item.product?.name}
-                  </span>
-                  <span>
-                    ฿{(item.product?.price * item.quantity).toLocaleString()}
-                  </span>
+                <div key={item.id} className="flex flex-col">
+                  {/* บรรทัดบน: ชื่อเมนูและราคา */}
+                  <div className="flex justify-between items-start">
+                    <span className="font-medium">
+                      {item.quantity}x {item.product?.name}
+                    </span>
+                    <span>
+                      ฿{(item.product?.price * item.quantity).toLocaleString()}
+                    </span>
+                  </div>
+
+                  {/* บรรทัดล่าง: รายละเอียดการชง */}
+                  {(item.brewMethod ||
+                    item.sweetness !== null ||
+                    item.note) && (
+                    <div className="text-xs text-zinc-500 pl-5 mt-0.5 flex flex-col gap-0.5">
+                      {item.brewMethod && (
+                        <span>• วิธีชง: {item.brewMethod}</span>
+                      )}
+                      {item.sweetness !== null && (
+                        <span>• ความหวาน: {item.sweetness}%</span>
+                      )}
+                      {item.note && <span>• หมายเหตุ: {item.note}</span>}
+                    </div>
+                  )}
                 </div>
               ))}
             </div>
 
-            {/* ยอดรวม */}
             <div className="flex justify-between items-center text-lg font-bold">
               <span>ยอดชำระสุทธิ</span>
               <span>฿{selectedOrder?.totalAmount.toLocaleString()}</span>
